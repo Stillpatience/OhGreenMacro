@@ -87,6 +87,20 @@ Sub harmonize_data()
     sortRange = "A1" + ":" + "XFD" + CStr(lastRow)
     Worksheets(sheetWithGmroi).Range(sortRange).Sort Key1:=Worksheets(sheetWithGmroi).Range(gmroiColName & "1"), Order1:=xlAscending, Header:=xlYes
     Worksheets(originalProfitSheetName).Move after:=Worksheets(gmroiSheetName)
+    colorSheets (allSheets)
+End Sub
+Sub colorSheets(allSheets As Variant)
+    For Each ws In Worksheets
+        If ws.name = "Dummy supplier" Or ws.name = "Negative profit" Or ws.name = "No sales" Or ws.name = "Removed by GMROI" Or ws.name = "Negative margin" Then
+            ws.Tab.ColorIndex = 3
+        End If
+        If ws.name = "Negative stock" Then
+            ws.Tab.ColorIndex = 46
+        End If
+        If ws.name = "Original profit" Or ws.name = "Supplier stats" Then
+            ws.Tab.ColorIndex = 4
+        End If
+    Next
 End Sub
 Sub calculateSellOutProfit(sheetName As String)
     lastCol = Worksheets(sheetName).Cells(1, Columns.Count).End(xlToLeft).column
