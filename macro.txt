@@ -39,7 +39,7 @@ Sub harmonize_data()
     StartTime = Timer
     calculateProfitPerUnit (standardizedSheetName)
     CreateSheet (infoSheetName)
-    Worksheets(infoSheetName).Cells(1, 1).Value = "For more info please refer to ..."
+    Worksheets(infoSheetName).Cells(1, 1).Value = "For more info please refer to https://github.com/Stillpatience/OhGreenMacro"
     Call delete_rows(standardizedSheetName, negativeStockSheetName, "W", "-1", "<=")
     
     Call calculateOriginalProfit(standardizedSheetName, originalProfitSheetName)
@@ -394,9 +394,9 @@ End Sub
 Sub standardize_data(standardizedSheetName As String)
     'List of all headers that need to be found in the initial data file
     Dim headers As Variant
-    headers = Array("Article", "Article EAN", "Lvl 3", "Lvl 3 name", "Lvl 4", "Lvl 4 name", "Lvl 5", "Lvl 5 name", "Lvl 6", "Lvl 6 name", "Lvl 7 name", "Lvl 8 name", "Sub sub category", "Article Supplier", "Description", "# stores for this EAN", "Turnover", "Cost MAP", "GP1", "GM1", "Sales Quantity", "Purchase Quantity", "Stock per Plant", "Supplier name", "Average stock")
+    headers = Array("Article", "Article EAN", "Lvl 3", "Lvl 3 name", "Lvl 4", "Lvl 4 name", "Lvl 5", "Lvl 5 name", "Lvl 6", "Lvl 6 name", "Lvl 7 name", "Lvl 8 name", "Sub sub category", "Article Supplier", "Description", "# stores for this EAN", "Turnover", "Cost MAP", "GP1", "GM1", "Sales Quantity", "Delivered Qty", "Stock per Plant", "Supplier name", "Average stock")
     'The headers as they will appear in the standardized data sheet in order
-    standardizedHeaders = Array("Article nr", "Article EAN", "Lvl 3", "Lvl 3 name", "Lvl 4", "Lvl 4 name", "Lvl 5", "Lvl 5 name", "Lvl 6", "Lvl 6 name", "Lvl 7 name", "Lvl 8 name", "Sub sub category", "Supplier nr", "Description", "# stores for this EAN", "Sum of Turnover", "Sum of Cost MAP", "Sum of GP1", "Average of GM1", "Sum of Sales Quantity", "Sum of Purchase Quantity", "Sum of Stock per Plant", "Supplier name", "Average stock")
+    standardizedHeaders = Array("Article nr", "Article EAN", "Lvl 3", "Lvl 3 name", "Lvl 4", "Lvl 4 name", "Lvl 5", "Lvl 5 name", "Lvl 6", "Lvl 6 name", "Lvl 7 name", "Lvl 8 name", "Sub sub category", "Supplier nr", "Description", "# stores for this EAN", "Sum of Turnover", "Sum of Cost MAP", "Sum of GP1", "Average of GM1", "Sum of Sales Quantity", "Sum of Delivered Qty", "Sum of Stock per Plant", "Supplier name", "Average stock")
     'List that keeps track of all column numbers where headers have been found
     Dim foundColumns() As Integer
     'Boolean that keeps track of whether foundColumns is an empty list
