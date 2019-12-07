@@ -1,0 +1,594 @@
+Public gmroiCol As Integer
+Public gmroiColName As String
+
+Sub harmonize_data()
+
+    Dim standardizedSheetName As String
+    standardizedSheetName = "Standardized data"
+    Dim negativeStockSheetName As String
+    negativeStockSheetName = "Negative stock"
+    Dim originalProfitSheetName As String
+    originalProfitSheetName = "Original profit"
+    Dim dummySupplierSheetName As String
+    dummySupplierSheetName = "Dummy supplier"
+    Dim negativeMarginSheetName As String
+    negativeMarginSheetName = "Negative margin"
+    Dim noSalesSheetName As String
+    noSalesSheetName = "No sales"
+    
+    Dim sheets As Variant
+    sheets = Array(dummySupplierSheetName, negativeStockSheetName, negativeMarginSheetName, noSalesSheetName)
+    
+    Dim sheetWithGmroi As String
+    sheetWithGmroi = "Standardized data before GMROI"
+    Dim supplierStatsSheet As String
+    supplierStatsSheet = "Supplier stats"
+    Dim gmroiSheetName As String
+    gmroiSheetName = "Removed by GMROI"
+    Dim plotName As String
+    plotName = "Plot"
+    Dim infoSheetName As String
+    infoSheetName = "Info sheet"
+    Dim allSheets As Variant
+    allSheets = Array(originalProfitSheetName, dummySupplierSheetName, negativeStockSheetName, negativeMarginSheetName, noSalesSheetName, gmroiSheetName, standardizedSheetName, sheetWithGmroi, supplierStatsSheet, infoSheetName, plotName)
+    removeSheetsIfExists (allSheets)
+    
+    StartTime = Timer
+    standardize_data (standardizedSheetName)
+    StandardizedSecondsElapsed = Round(Timer - StartTime, 2)
+    StartTime = Timer
+    calculateProfitPerUnit (standardizedSheetName)
+    CreateSheet (infoSheetName)
+    Worksheets(infoSheetName).Cells(1, 1).Value = "For more info please refer to ..."
+    Call delete_rows(standardizedSheetName, negativeStockSheetName, "W", "-1", "<=")
+    
+    Call calculateOriginalProfit(standardizedSheetName, originalProfitSheetName)
+   
+    Call delete_rows(standardizedSheetName, dummySupplierSheetName, "N", "0001007077", "=")
+    
+    Call delete_rows(standardizedSheetName, negativeMarginSheetName, "T", "0", "<=")
+    
+    Call delete_rows(standardizedSheetName, noSalesSheetName, "U", "0", "<=")
+    SecondsElapsed = Round(Timer - StartTime, 2)
+    Dim deletionRate As Double
+    
+    Dim amountOfDeletedArticles As Long
+    amountOfDeletedArticles = countDeletedArticles(sheets)
+    GMROI (standardizedSheetName)
+    totalArticles = Worksheets(standardizedSheetName).Cells(Rows.Count, 1).End(xlUp).Row + amountOfDeletedArticles - 1
+    
+    Call copySheet(standardizedSheetName, sheetWithGmroi)
+    
+    Call plot(sheetWithGmroi, plotName)
+    Dim wanted_delete_percentage As Double
+    Dim input_number As Integer
+    input_number = -1
+    deletePerc = Round((amountOfDeletedArticles / totalArticles) * 100, 2)
+    Do While input_number < 0 Or input_number > 100
+        On Error Resume Next
+        input_number = CInt(InputBox("Already removed " & CStr(amountOfDeletedArticles) & " of " & CStr(totalArticles) & " articles. This is " & deletePerc & "%." & " What percentage of leftover articles should be removed with GMROI? (0-100) "))
+    Loop
+    wanted_delete_percentage = input_number / 100
+    deletedByGMROI = removeWithGmroi(standardizedSheetName, gmroiSheetName, wanted_delete_percentage)
+    
+    Call calculateSupplierStats(sheetWithGmroi, supplierStatsSheet, standardizedSheetName)
+    Call redistributeDeletedItems(standardizedSheetName, gmroiSheetName)
+    Call redistributeDeletedItems(standardizedSheetName, dummySupplierSheetName)
+    Call redistributeDeletedItems(standardizedSheetName, negativeStockSheetName)
+    Call redistributeDeletedItems(standardizedSheetName, negativeMarginSheetName)
+    Call calculateNewProfitPerProduct(standardizedSheetName, originalProfitSheetName)
+    calculateSellOutProfit (dummySupplierSheetName)
+    calculateSellOutProfit (gmroiSheetName)
+    Call calculateTotalSellOutProfit(originalProfitSheetName, gmroiSheetName, dummySupplierSheetName)
+    Call calculateProfitDeletedItems(originalProfitSheetName, dummySupplierSheetName, negativeMarginSheetName)
+    autoFitSheets (allSheets)
+    MsgBox "Standardizing dataset took " & StandardizedSecondsElapsed & " seconds " & " and the rest took " & SecondsElapsed & " seconds. " & "Amount of deleted articles before use of GMROI: " & amountOfDeletedArticles & ". GMROI deleted " & deletedByGMROI & " articles. There were " & totalArticles & " unique articles. Deletion rate was set to " & input_number & "%", vbInformation
+    lastRow = Worksheets(sheetWithGmroi).Cells(Rows.Count, 1).End(xlUp).Row
+    sortRange = "A1" + ":" + "XFD" + CStr(lastRow)
+    Worksheets(sheetWithGmroi).Range(sortRange).Sort Key1:=Worksheets(sheetWithGmroi).Range(gmroiColName & "1"), Order1:=xlAscending, Header:=xlYes
+    Worksheets(originalProfitSheetName).Move after:=Worksheets(gmroiSheetName)
+End Sub
+Sub calculateSellOutProfit(sheetName As String)
+    lastCol = Worksheets(sheetName).Cells(1, Columns.Count).End(xlToLeft).column
+    lastRow = Worksheets(sheetName).Cells(Rows.Count, 1).End(xlUp).Row
+    Worksheets(sheetName).Cells(1, lastCol + 1).Value = "Sell Out Profit"
+    For i = 2 To lastRow
+        Worksheets(sheetName).Cells(i, lastCol + 1) = Worksheets(sheetName).Cells(i, 19) * Worksheets(sheetName).Cells(i, 23)
+    Next
+End Sub
+Sub calculateProfitDeletedItems(profitSheet As String, dummySupplierSheet As String, negativeMarginSheet As String)
+    lastCol = Worksheets(profitSheet).Cells(1, Columns.Count).End(xlToLeft).column
+    lastRow = Worksheets(profitSheet).Cells(Rows.Count, 1).End(xlUp).Row
+    lastRowNegMargSheet = Worksheets(negativeMarginSheet).Cells(Rows.Count, 1).End(xlUp).Row
+    lastRowSupplierSheet = Worksheets(dummySupplierSheet).Cells(Rows.Count, 1).End(xlUp).Row
+    Dim totalProfitNegMarg As Double
+    totalProfitNegMarg = 0
+    For i = 2 To lastRowNegMargSheet
+        totalProfitNegMarg = totalProfitNegMarg + Worksheets(negativeMarginSheet).Cells(i, 19).Value
+    Next
+    Dim totalProfitDummySupplier As Double
+    totalProfitDummySupplier = 0
+    For i = 2 To lastRowSupplierSheet
+        totalProfitDummySupplier = totalProfitDummySupplier + Worksheets(dummySupplierSheet).Cells(i, 19).Value
+    Next
+    Worksheets(profitSheet).Cells(1, lastCol + 1).Value = "Items deleted by"
+    Worksheets(profitSheet).Cells(1, lastCol + 2).Value = "Total profit of articles"
+    Worksheets(profitSheet).Cells(2, lastCol + 1).Value = "Negative margin"
+    Worksheets(profitSheet).Cells(2, lastCol + 2).Value = totalProfitNegMarg
+    Worksheets(profitSheet).Cells(3, lastCol + 1).Value = "Dummy supplier"
+    Worksheets(profitSheet).Cells(3, lastCol + 2).Value = totalProfitDummySupplier
+End Sub
+Sub removeSheetsIfExists(var As Variant)
+    For Each ws In Worksheets
+        If InArray(ws.name, var) Then
+            Application.DisplayAlerts = False
+            sheets(ws.name).Delete
+            Application.DisplayAlerts = True
+        End If
+    Next
+    For Each cht In ActiveWorkbook.Charts
+        Application.DisplayAlerts = False
+        cht.Delete
+        Application.DisplayAlerts = True
+    Next cht
+End Sub
+Sub calculateTotalSellOutProfit(profitSheet As String, gmroiSheet As String, dummySupplierSheet As String)
+    lastCol = Worksheets(profitSheet).Cells(1, Columns.Count).End(xlToLeft).column
+    lastRow = Worksheets(profitSheet).Cells(Rows.Count, 1).End(xlUp).Row
+    lastRowGmroiSheet = Worksheets(gmroiSheet).Cells(Rows.Count, 1).End(xlUp).Row
+    lastRowSupplierSheet = Worksheets(dummySupplierSheet).Cells(Rows.Count, 1).End(xlUp).Row
+    Dim totalSellOutGmroi As Double
+    totalSellOutGmroi = 0
+    For i = 2 To lastRowGmroiSheet
+        totalSellOutGmroi = totalSellOutGmroi + Worksheets(gmroiSheet).Cells(i, 27).Value
+    Next
+    Dim totalSellOutSupplier As Double
+    totalSellOutSupplier = 0
+    For i = 2 To lastRowSupplierSheet
+        totalSellOutSupplier = totalSellOutSupplier + Worksheets(dummySupplierSheet).Cells(i, 25).Value
+    Next
+    Worksheets(profitSheet).Cells(1, lastCol + 1).Value = "Items deleted by"
+    Worksheets(profitSheet).Cells(1, lastCol + 2).Value = "Sell out profit"
+    Worksheets(profitSheet).Cells(2, lastCol + 1).Value = "GMROI"
+    Worksheets(profitSheet).Cells(2, lastCol + 2).Value = totalSellOutGmroi
+    Worksheets(profitSheet).Cells(3, lastCol + 1).Value = "Dummy supplier"
+    Worksheets(profitSheet).Cells(3, lastCol + 2).Value = totalSellOutSupplier
+End Sub
+
+Sub calculateSupplierStats(dataSheetWithGmroi As String, resultSheet As String, stdSheet As String)
+    CreateSheet (resultSheet)
+    lastRowStdSheet = Worksheets(stdSheet).Cells(Rows.Count, 1).End(xlUp).Row
+    lastRow = Worksheets(dataSheetWithGmroi).Cells(Rows.Count, 1).End(xlUp).Row
+    sortRange = "A1" + ":" + "XFD" + CStr(lastRow)
+    Worksheets(dataSheetWithGmroi).Range(sortRange).Sort Key1:=Worksheets(dataSheetWithGmroi).Range("N1"), Order1:=xlDescending, Header:=xlYes
+    supplierNr = Worksheets(dataSheetWithGmroi).Cells(2, 14).Value
+    Worksheets(resultSheet).Cells(1, 1) = "Supplier number"
+    Worksheets(resultSheet).Cells(1, 2) = "Supplier name"
+    Worksheets(resultSheet).Cells(1, 3) = "% of total GP"
+    Worksheets(resultSheet).Cells(1, 4) = "Amount of unique articles before GMROI deletion"
+    Worksheets(resultSheet).Cells(1, 5) = "Amount of unique articles after GMROI deletion"
+    Worksheets(resultSheet).Cells(1, 6) = "Amount of unique deleted articles"
+    Worksheets(resultSheet).Cells(1, 7) = "% of GP loss due to removed articles"
+    Dim totalGP As Double
+    totalGP = 0
+    For j = 2 To lastRow
+        totalGP = totalGP + Worksheets(dataSheetWithGmroi).Cells(j, 19).Value
+    Next
+    i = 2
+    rownr = 2
+    supplierRank = 2
+    Dim totalSupplierProfit As Double
+    While rownr < lastRow
+        supplierNr = Worksheets(dataSheetWithGmroi).Cells(i, 14).Value
+        totalSupplierProfit = 0
+        amountOfArticles = 0
+        While Worksheets(dataSheetWithGmroi).Cells(i, 14).Value = supplierNr
+            totalSupplierProfit = totalSupplierProfit + Worksheets(dataSheetWithGmroi).Cells(i, 19).Value
+            amountOfArticles = amountOfArticles + 1
+            i = i + 1
+        Wend
+        Worksheets(resultSheet).Cells(supplierRank, 1).Value = supplierNr
+        Worksheets(resultSheet).Cells(supplierRank, 2).Value = Worksheets(dataSheetWithGmroi).Cells(rownr, 24)
+        Worksheets(resultSheet).Cells(supplierRank, 3).Value = totalSupplierProfit / totalGP
+        Worksheets(resultSheet).Cells(supplierRank, 3).NumberFormat = "0.00%"
+        Worksheets(resultSheet).Cells(supplierRank, 4).Value = amountOfArticles
+        amountOfArticlesLeft = 0
+        leftSupplierProfit = 0
+        For k = 2 To lastRowStdSheet
+            If Worksheets(stdSheet).Cells(k, 14).Value = supplierNr Then
+                amountOfArticlesLeft = amountOfArticlesLeft + 1
+                leftSupplierProfit = leftSupplierProfit + Worksheets(stdSheet).Cells(k, 19).Value
+            End If
+        Next
+        Worksheets(resultSheet).Cells(supplierRank, 5).Value = amountOfArticlesLeft
+        Worksheets(resultSheet).Cells(supplierRank, 6).Value = amountOfArticles - amountOfArticlesLeft
+        Worksheets(resultSheet).Cells(supplierRank, 7).Value = (totalSupplierProfit - leftSupplierProfit) / totalSupplierProfit
+        Worksheets(resultSheet).Cells(supplierRank, 7).NumberFormat = "0.00%"
+        rownr = i
+        supplierRank = supplierRank + 1
+    Wend
+End Sub
+Sub plot(sheetName As String, plotName As String)
+    Worksheets(sheetName).Range("A:XFD").Sort Key1:=Range(gmroiColName & "1"), Order1:=xlAscending, Header:=xlYes
+    lastCol = Worksheets(sheetName).Cells(1, Columns.Count).End(xlToLeft).column
+    lastRow = Worksheets(sheetName).Cells(Rows.Count, 1).End(xlUp).Row
+    Worksheets(sheetName).Cells(1, lastCol + 1).Value = "Cumulative GP"
+    Worksheets(sheetName).Cells(1, lastCol + 2).Value = "Percentile"
+    Dim totalProfit As Double
+    totalProfit = 0
+    For i = 2 To lastRow
+        totalProfit = totalProfit + Worksheets(sheetName).Cells(i, 19).Value
+        Worksheets(sheetName).Cells(i, lastCol + 1).Value = totalProfit
+        Worksheets(sheetName).Cells(i, lastCol + 2).NumberFormat = "0.00%"
+        Worksheets(sheetName).Cells(i, lastCol + 2).Value = (i - 1) / (lastRow - 1)
+    Next
+    cumulativeCol = lastCol + 1
+    cumulativeColName = Split(Cells(1, cumulativeCol).Address, "$")(1)
+    percentileCol = lastCol + 2
+    percentileColName = Split(Cells(1, percentileCol).Address, "$")(1)
+    firstRow = 2
+    Do While Worksheets(sheetName).Cells(firstRow, gmroiCol).Value < 0
+        firstRow = firstRow + 1
+    Loop
+    Do While Worksheets(sheetName).Cells(lastRow, gmroiCol).Value = "" Or Worksheets(sheetName).Cells(lastRow, gmroiCol).Value > 5
+        lastRow = lastRow - 1
+    Loop
+    Dim chart1 As Chart
+    Set chart1 = Charts.Add
+    colLetterxAxis = Split(Worksheets(sheetName).Cells(1, lastCol + 2).Address, "$")(1)
+    RngxAxis = colLetterxAxis & "2:" & colLetterxAxis & CStr(lastRow)
+    If lastRow - firstRow < 50 Then
+        With chart1
+            .ChartType = xlXYScatterSmooth
+            '.SetSourceData Source:=Worksheets(sheetName).Range("Z" & CStr(firstRow) & ":AA" & CStr(lastRow))
+            .SeriesCollection(1).name = "GMROI"
+            .SeriesCollection(1).XValues = Worksheets(sheetName).Range(percentileColName & CStr(firstRow) & ":" & percentileColName & CStr(lastRow))
+            .SeriesCollection(1).Values = Worksheets(sheetName).Range(gmroiColName & CStr(firstRow) & ":" & gmroiColName & CStr(lastRow))
+            .SeriesCollection(2).AxisGroup = 2
+            .SeriesCollection(2).name = "Initial profit loss"
+            .SeriesCollection(2).XValues = Worksheets(sheetName).Range(percentileColName & CStr(firstRow) & ":" & percentileColName & CStr(lastRow))
+            .SeriesCollection(2).Values = Worksheets(sheetName).Range(cumulativeColName & CStr(firstRow) & ":" & cumulativeColName & CStr(lastRow))
+            .Axes(xlCategory, xlPrimary).HasTitle = True
+            .Axes(xlCategory, xlPrimary).AxisTitle.Characters.Text = "Remove percentage"
+            .Axes(xlValue, xlPrimary).HasTitle = True
+            .Axes(xlValue, xlPrimary).AxisTitle.Characters.Text = "GMROI and initial profit loss"
+            .HasTitle = True
+            .ChartTitle.Text = "Initial profit loss and GMROI vs delete percentage"
+            .Axes(xlCategory).MaximumScale = 1
+        End With
+    Else
+         With chart1
+            .ChartType = xlLine
+            '.SetSourceData Source:=Worksheets(sheetName).Range("Z" & CStr(firstRow) & ":AA" & CStr(lastRow))
+            .SeriesCollection(1).name = "GMROI"
+            .SeriesCollection(1).XValues = Worksheets(sheetName).Range(percentileColName & CStr(firstRow) & ":" & percentileColName & CStr(lastRow))
+            .SeriesCollection(1).Values = Worksheets(sheetName).Range(gmroiColName & CStr(firstRow) & ":" & gmroiColName & CStr(lastRow))
+            .SeriesCollection(2).AxisGroup = 2
+            .SeriesCollection(2).name = "Initial profit loss"
+            .SeriesCollection(2).XValues = Worksheets(sheetName).Range(percentileColName & CStr(firstRow) & ":" & percentileColName & CStr(lastRow))
+            .SeriesCollection(2).Values = Worksheets(sheetName).Range(cumulativeColName & CStr(firstRow) & ":" & cumulativeColName & CStr(lastRow))
+            .Axes(xlCategory, xlPrimary).HasTitle = True
+            .Axes(xlCategory, xlPrimary).AxisTitle.Characters.Text = "Remove percentage"
+            .Axes(xlValue, xlPrimary).HasTitle = True
+            .Axes(xlValue, xlPrimary).AxisTitle.Characters.Text = "GMROI and initial profit loss"
+            .HasTitle = True
+            .ChartTitle.Text = "Initial profit loss and GMROI vs delete percentage"
+        End With
+    End If
+    amountOfSeries = chart1.SeriesCollection.Count
+    For i = 3 To amountOfSeries
+        chart1.SeriesCollection(3).Delete
+    Next
+    ActiveSheet.name = plotName
+    chart1.ChartArea.Select
+    'chart1.SeriesCollection(1).XValues = Worksheets(sheetName).Range(RngxAxis)
+End Sub
+Sub copySheet(original As String, target As String)
+    Worksheets(original).Copy after:=sheets(sheets.Count)
+    ActiveSheet.name = target
+End Sub
+Sub autoFitSheets(var As Variant)
+    For i = LBound(var) To UBound(var)
+        Worksheets(var(i)).Columns("A:XFD").AutoFit
+    Next
+End Sub
+
+Sub calculateNewProfitPerProduct(name As String, resSheet As String)
+    lastRow = Worksheets(name).Cells(Rows.Count, 1).End(xlUp).Row
+    lastCol = Worksheets(name).Cells(1, Columns.Count).End(xlToLeft).column
+    Worksheets(name).Cells(1, lastCol + 1).Value = "New GP"
+    For i = 2 To lastRow
+        Worksheets(name).Cells(i, lastCol + 1).Value = (Worksheets(name).Cells(i, 21).Value * Worksheets(name).Cells(i, 26).Value)
+    Next
+    Call calculateNewTotalProfit(name, lastCol + 1, resSheet)
+End Sub
+Sub calculateNewTotalProfit(name As String, col As Integer, resSheet As String)
+    lastRow = Worksheets(resSheet).Cells(Rows.Count, 1).End(xlUp).Row
+    lastCol = Worksheets(resSheet).Cells(1, Columns.Count).End(xlToLeft).column
+    Worksheets(resSheet).Cells(1, lastCol + 1).Value = "New Profit"
+    lastRowData = Worksheets(name).Cells(Rows.Count, 1).End(xlUp).Row
+    Dim totalProfit As Double
+    totalProfit = 0
+    For i = 2 To lastRowData
+        totalProfit = totalProfit + Worksheets(name).Cells(i, 29)
+    Next
+    Worksheets(resSheet).Cells(2, lastCol + 1).Value = totalProfit
+    Worksheets(resSheet).Cells(1, lastCol + 2).Value = "Difference in profit"
+    Worksheets(resSheet).Cells(2, lastCol + 2).Value = totalProfit - Worksheets(resSheet).Cells(2, 1).Value
+End Sub
+
+Sub redistributeDeletedItems(dataSheet As String, deletedSheet As String)
+    lastRow = Worksheets(dataSheet).Cells(Rows.Count, 1).End(xlUp).Row
+    sortRange = "A1" + ":" + "XFD" + CStr(lastRow)
+    Worksheets(dataSheet).Range(sortRange).Sort Key1:=Worksheets(dataSheet).Range(gmroiColName & "1"), Order1:=xlDescending, Header:=xlYes
+    lastRowDeleted = Worksheets(deletedSheet).Cells(Rows.Count, 1).End(xlUp).Row
+    For i = 2 To lastRowDeleted
+        Dim amountToRedistribute As Long
+        amountToRedistribute = Worksheets(deletedSheet).Cells(i, 21).Value
+        j = 2
+        While amountToRedistribute > 0
+            If j > lastRow Then
+                j = 2
+            End If
+            Worksheets(dataSheet).Cells(j, 21).Value = Worksheets(dataSheet).Cells(j, 21).Value + 1
+            j = j + 1
+            amountToRedistribute = amountToRedistribute - 1
+        Wend
+        
+     Next
+End Sub
+Sub calculateOriginalProfit(dataSheetName As String, newSheetName As String)
+    lastRow = Worksheets(dataSheetName).Cells(Rows.Count, 1).End(xlUp).Row
+    CreateSheet (newSheetName)
+    Dim totalProfit As Double
+    For i = 2 To lastRow
+        totalProfit = totalProfit + Worksheets(dataSheetName).Cells(i, 19).Value
+    Next
+    Worksheets(newSheetName).Cells(1, 1).Value = "Original profit"
+    Worksheets(newSheetName).Cells(2, 1).Value = totalProfit
+End Sub
+Sub calculateProfitPerUnit(name As String)
+    lastRow = Worksheets(name).Cells(Rows.Count, 1).End(xlUp).Row
+    lastCol = Worksheets(name).Cells(1, Columns.Count).End(xlToLeft).column
+    Worksheets(name).Cells(1, lastCol + 1).Value = "Profit per Unit"
+    For i = 2 To lastRow
+        If Worksheets(name).Cells(i, 21).Value <> 0 Then
+            Worksheets(name).Cells(i, lastCol + 1).Value = Worksheets(name).Cells(i, 19).Value / Worksheets(name).Cells(i, 21).Value
+        End If
+    Next
+End Sub
+
+Function removeWithGmroi(name As String, grmoiSheetName As String, deletionRate As Double)
+    Worksheets(name).Activate
+    amountOfArticlesLeft = Worksheets(name).Cells(Rows.Count, 1).End(xlUp).Row - 1
+    Dim amountOfArticlesToStillBeRemoved As Long
+    amountOfArticlesToStillBeRemoved = deletionRate * amountOfArticlesLeft
+    sortRange = "A1" + ":" + "XFD" + CStr(amountOfArticlesLeft + 1)
+    CreateSheet (grmoiSheetName)
+    Worksheets(name).Range(sortRange).Sort Key1:=Worksheets(name).Range(gmroiColName & "1"), Order1:=xlDescending, Header:=xlYes
+    Worksheets(name).Range("1:1").Copy Destination:=Worksheets(grmoiSheetName).Range("1:1")
+    Worksheets(name).Range(CStr(amountOfArticlesLeft - amountOfArticlesToStillBeRemoved + 2) & ":" & CStr(amountOfArticlesLeft + 1)).Cut Destination:=Worksheets(grmoiSheetName).Range("2:" & CStr(amountOfArticlesToStillBeRemoved + 1))
+    removeWithGmroi = amountOfArticlesToStillBeRemoved
+End Function
+
+Sub GMROI(name As String)
+    lastRow = Worksheets(name).Cells(Rows.Count, 1).End(xlUp).Row
+    lastCol = Worksheets(name).Cells(1, Columns.Count).End(xlToLeft).column
+    Worksheets(name).Cells(1, lastCol + 1).Value = "Starting Stock"
+    Worksheets(name).Cells(1, lastCol + 2).Value = "GMROI"
+    Worksheets(name).Range("A:XFD").Style = "SAPMemberCell"
+    For i = 2 To lastRow
+        On Error Resume Next
+        If Worksheets(name).Cells(i, 25).Value = "" Then
+            Worksheets(name).Cells(i, lastCol + 1).Value = Worksheets(name).Cells(i, 23).Value + Worksheets(name).Cells(i, 21).Value + Worksheets(name).Cells(i, 22).Value 'bereken de beginvoorraad en geef deze eer in kolom 6'
+            Worksheets(name).Cells(i, lastCol + 2).Value = Worksheets(name).Cells(i, 19).Value / (((Worksheets(name).Cells(i, lastCol + 1).Value + Worksheets(name).Cells(i, 23).Value) / 2) * (Worksheets(name).Cells(i, 18).Value / Worksheets(name).Cells(i, 21).Value)) 'bereken de GMROI'
+        Else
+            Worksheets(name).Cells(i, lastCol + 2).Value = Worksheets(name).Cells(i, 19).Value / ((Worksheets(name).Cells(i, 25) * (Worksheets(name).Cells(i, 18).Value / Worksheets(name).Cells(i, 21).Value)))
+        End If
+    Next
+    gmroiCol = lastCol + 2
+    gmroiColName = Split(Cells(1, gmroiCol).Address, "$")(1)
+End Sub
+
+
+Sub standardize_data(standardizedSheetName As String)
+    'List of all headers that need to be found in the initial data file
+    Dim headers As Variant
+    headers = Array("Article", "Article EAN", "Lvl 3", "Lvl 3 name", "Lvl 4", "Lvl 4 name", "Lvl 5", "Lvl 5 name", "Lvl 6", "Lvl 6 name", "Lvl 7 name", "Lvl 8 name", "Sub sub category", "Article Supplier", "Description", "# stores for this EAN", "Turnover", "Cost MAP", "GP1", "GM1", "Sales Quantity", "Purchase Quantity", "Stock per Plant", "Supplier name", "Average stock")
+    'The headers as they will appear in the standardized data sheet in order
+    standardizedHeaders = Array("Article nr", "Article EAN", "Lvl 3", "Lvl 3 name", "Lvl 4", "Lvl 4 name", "Lvl 5", "Lvl 5 name", "Lvl 6", "Lvl 6 name", "Lvl 7 name", "Lvl 8 name", "Sub sub category", "Supplier nr", "Description", "# stores for this EAN", "Sum of Turnover", "Sum of Cost MAP", "Sum of GP1", "Average of GM1", "Sum of Sales Quantity", "Sum of Purchase Quantity", "Sum of Stock per Plant", "Supplier name", "Average stock")
+    'List that keeps track of all column numbers where headers have been found
+    Dim foundColumns() As Integer
+    'Boolean that keeps track of whether foundColumns is an empty list
+    Dim isEmpty As Boolean
+    isEmpty = True
+    'Integer that keeps track of the last filled in row of the data sheet
+    lastRow = Cells(Rows.Count, 1).End(xlUp).Row
+    'Integer that keeps track of the last filled column of the data sheet
+    lastCol = Cells(1, Columns.Count).End(xlToLeft).column
+    'Create the sheet for the standardized data
+    CreateSheet (standardizedSheetName)
+    'Initialize the standardized sheet with the given headers
+    For j = 1 To ArrayLength(headers)
+        Worksheets(standardizedSheetName).Cells(1, j) = headers(j - 1)
+    Next
+    'Select the data sheet
+    dataSheetName = "Sheet1"
+    Dim dataSheet As Worksheet
+    Set dataSheet = Worksheets(dataSheetName)
+    Worksheets(dataSheetName).Select
+    'Find all headers
+    'Loop over all columns
+    For j = 1 To lastCol
+        'Loop over all rows considering the first filled row in the column as the header of the column
+        For i = 1 To lastRow
+            'If the value of the cell in the column is not empty it is a header
+            If Cells(i, j).Value <> "" Then
+                currentHeader = Cells(i, j).Value
+                If currentHeader = "Article EAN" Then
+                    lastRowDataSheet = dataSheet.Cells(Rows.Count, 1).End(xlUp).Row
+                    Dim lastColDataSheet As String
+                    lastColDataSheet = dataSheet.Cells(1, Columns.Count).End(xlToLeft).Address
+                    colLetter = Mid(lastColDataSheet, 2, 2)
+                    sortCol = Cells(i, j).Address
+                    sortColLetter = Mid(sortCol, 2, 1)
+                    sortRange = "A1" + ":" + CStr(colLetter) + CStr(lastRowDataSheet)
+                    dataSheet.Range(sortRange).Sort Key1:=dataSheet.Range(sortColLetter + "1"), Order1:=xlAscending, Header:=xlYes
+                End If
+                Dim stores() As Variant
+                If InArray(Cells(i, j).Value, headers) Then
+                    'If the list is empty the ReDim has to be done differently
+                    If isEmpty Then
+                        ReDim Preserve foundColumns(1)
+                        isEmpty = False
+                    Else
+                        ReDim Preserve foundColumns(UBound(foundColumns) + 1)
+                    End If
+                    'Copy the found column to the standardized worksheet in the correct column
+                    For k = 1 To Worksheets(standardizedSheetName).Cells(1, Columns.Count).End(xlToLeft).column
+                        If Worksheets(standardizedSheetName).Cells(1, k).Value = currentHeader Then
+                            sheets(dataSheetName).Columns(j).Copy Destination:=sheets(standardizedSheetName).Columns(k)
+                        End If
+                    Next
+                    foundColumns(UBound(foundColumns)) = j
+                    Exit For
+                End If
+                Exit For
+            End If
+        Next
+    Next
+    'Change the headers in the standardized sheet to the new headers
+    For j = 1 To ArrayLength(standardizedHeaders)
+        Worksheets(standardizedSheetName).Cells(1, j) = standardizedHeaders(j - 1)
+    Next
+    summateStandardizedData (standardizedSheetName)
+End Sub
+
+'Function that summate all info for unique articles
+Public Sub summateStandardizedData(sheetName As String)
+    lrow = Cells(Rows.Count, 1).End(xlUp).Row
+    i = 2
+    j = 3
+    While Worksheets(sheetName).Cells(i + 1, 2).Value <> "" And j < lrow
+        ean = Worksheets(sheetName).Cells(i, 2).Value
+        Worksheets(sheetName).Cells(i, 16).Value = 1
+        j = i + 1
+        Do While Worksheets(sheetName).Cells(j, 2).Value <> ""
+            If Worksheets(sheetName).Cells(j, 2).Value = ean Then
+                For col = 17 To 23
+                    If Worksheets(sheetName).Cells(i, col).Value <> "X" And Worksheets(sheetName).Cells(j, col).Value <> "X" Then
+                        Worksheets(sheetName).Cells(i, col).Value = Worksheets(sheetName).Cells(i, col).Value + Worksheets(sheetName).Cells(j, col).Value
+                    End If
+                Next
+                Worksheets(sheetName).Cells(i, 16).Value = Worksheets(sheetName).Cells(i, 16).Value + 1
+                j = j + 1
+            Else
+                ean = Worksheets(sheetName).Cells(j, 2).Value
+                prev_i = i
+                i = j
+                Exit Do
+            End If
+        Loop
+        If Worksheets(sheetName).Cells(prev_i, 20).Value <> "X" Then
+            Worksheets(sheetName).Cells(prev_i, 20).Value = Worksheets(sheetName).Cells(prev_i, 20).Value / Worksheets(sheetName).Cells(prev_i, 16).Value
+        End If
+    Wend
+     lastRow = Worksheets(sheetName).Cells(Rows.Count, 1).End(xlUp).Row
+    
+    sortRange = "A1" + ":" + "XFD" + CStr(lastRow)
+    Worksheets(sheetName).Range(sortRange).Sort Key1:=Worksheets(sheetName).Range("P1"), Order1:=xlDescending, Header:=xlYes
+    For i = 1 To lastRow
+        If Worksheets(sheetName).Cells(i, 16) = "" Then
+            first_i = i
+            Exit For
+        End If
+    Next
+    Dim deletionString As String
+    deletionString = CStr(first_i) & ":" & CStr(lastRow)
+    Worksheets(sheetName).Range(deletionString).EntireRow.Delete
+End Sub
+
+Public Function ArrayLength(arr As Variant)
+    ArrayLength = UBound(arr) - LBound(arr) + 1
+End Function
+
+'Function that creates a new sheet in the excel file with the given name. The sheet will be added as last sheet
+Public Sub CreateSheet(name As String)
+    Dim newws As Worksheet
+    Set newws = ThisWorkbook.sheets.Add(after:= _
+             ThisWorkbook.sheets(ThisWorkbook.sheets.Count))
+    newws.name = name
+    newws.Range("A:XFD").Style = "SAPMemberCell"
+End Sub
+
+'Function that prints out arrays in a message box
+Public Sub PrintArray(arr As Variant)
+    Dim printString As String
+    printString = "Found columns "
+    For i = LBound(arr) To UBound(arr)
+        printString = printString + " " + CStr(arr(i))
+    Next
+    MsgBox printString
+End Sub
+
+'Function that checks if element is part of an array
+Public Function InArray(el As Variant, arr As Variant) As Boolean
+    For i = LBound(arr) To UBound(arr)
+        If (arr(i) = el) Then
+            InArray = True
+            Exit Function
+        End If
+    Next
+    InArray = False
+End Function
+
+Sub delete_rows(standardizedSheetName As String, newSheetName As String, column As String, searchedValue As String, operator As String)
+    Set ws = ThisWorkbook.sheets.Add(after:=ThisWorkbook.sheets(ThisWorkbook.sheets.Count))
+    ws.name = newSheetName
+    Dim DummySheet As Worksheet
+    Set DummySheet = Worksheets(newSheetName)
+    
+    Dim dataSheet As Worksheet
+    Set dataSheet = Worksheets(standardizedSheetName)
+    lastRowDataSheet = dataSheet.Cells(Rows.Count, 1).End(xlUp).Row
+    dataSheet.Rows(1).EntireRow.Copy Worksheets(newSheetName).Rows(1)
+    
+    sortRange = "A1" + ":" + "XFD" + CStr(lastRowDataSheet)
+    dataSheet.Range(sortRange).Sort Key1:=dataSheet.Range(column + "1"), Order1:=xlDescending, Header:=xlYes
+    
+    For i = 2 To lastRowDataSheet
+        If dataSheet.Cells(i, column).Value <> "X" And dataSheet.Cells(i, column).Value <= searchedValue Then
+            Dim first_i As Long
+            first_i = i
+            
+            If operator = "=" Then
+                While (dataSheet.Cells(i + 1, column).Value = searchedValue)
+                    i = i + 1
+                Wend
+            Else
+                If operator = "<=" Then
+                    
+                    While (i < lastRowDataSheet And CInt(dataSheet.Cells(i + 1, column).Value) <= CInt(searchedValue))
+                        i = i + 1
+                    Wend
+                End If
+            End If
+            copyRange = "A" + CStr(first_i) + ":" + "XFD" + CStr(i)
+            pasteRange = "A1" + ":" + "XFD" + CStr(i - first_i + 1)
+            dataSheet.Range(copyRange).Copy Destination:=DummySheet.Range(pasteRange).End(xlUp).Offset(1)
+            dataSheet.Range(copyRange).Delete
+            Exit For
+        End If
+    Next
+End Sub
+
+Public Function countDeletedArticles(var As Variant)
+    Dim amountOfDeletedRows As Long
+    amountOfDeletedRows = 0
+    For i = LBound(var) To UBound(var)
+        Dim currentSheet As Worksheet
+        Set currentSheet = Worksheets(var(i))
+        amountOfDeletedRows = amountOfDeletedRows + currentSheet.Cells(Rows.Count, 1).End(xlUp).Row - 1
+    Next
+    countDeletedArticles = amountOfDeletedRows
+End Function
