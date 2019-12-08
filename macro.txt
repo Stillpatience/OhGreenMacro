@@ -267,7 +267,7 @@ Sub plot(sheetName As String, plotName As String)
             .SeriesCollection(1).XValues = Worksheets(sheetName).Range(percentileColName & CStr(firstRow) & ":" & percentileColName & CStr(lastRow))
             .SeriesCollection(1).Values = Worksheets(sheetName).Range(gmroiColName & CStr(firstRow) & ":" & gmroiColName & CStr(lastRow))
             .SeriesCollection(2).AxisGroup = 2
-            .SeriesCollection(2).name = "Sell out revenue"
+            .SeriesCollection(2).name = "Initial profit loss"
             .SeriesCollection(2).XValues = Worksheets(sheetName).Range(percentileColName & CStr(firstRow) & ":" & percentileColName & CStr(lastRow))
             .SeriesCollection(2).Values = Worksheets(sheetName).Range(cumulativeColName & CStr(firstRow) & ":" & cumulativeColName & CStr(lastRow))
             .Axes(xlCategory, xlPrimary).HasTitle = True
@@ -276,9 +276,9 @@ Sub plot(sheetName As String, plotName As String)
             .Axes(xlValue, xlPrimary).HasTitle = True
             .Axes(xlValue, xlPrimary).AxisTitle.Characters.Text = "GMROI"
             .Axes(xlValue, xlSecondary).HasTitle = True
-            .Axes(xlValue, xlSecondary).AxisTitle.Characters.Text = "Sell out revenue"
+            .Axes(xlValue, xlSecondary).AxisTitle.Characters.Text = "Initial profit loss"
             .HasTitle = True
-            .ChartTitle.Text = "Sell out revenue and GMROI vs delete percentage"
+            .ChartTitle.Text = "Initial profit loss and GMROI vs delete percentage"
             .Axes(xlCategory).MaximumScale = 1
         End With
     Else
@@ -289,7 +289,7 @@ Sub plot(sheetName As String, plotName As String)
             .SeriesCollection(1).XValues = Worksheets(sheetName).Range(percentileColName & CStr(firstRow) & ":" & percentileColName & CStr(lastRow))
             .SeriesCollection(1).Values = Worksheets(sheetName).Range(gmroiColName & CStr(firstRow) & ":" & gmroiColName & CStr(lastRow))
             .SeriesCollection(2).AxisGroup = 2
-            .SeriesCollection(2).name = "Sell out revenue"
+            .SeriesCollection(2).name = "Initial profit loss"
             .SeriesCollection(2).XValues = Worksheets(sheetName).Range(percentileColName & CStr(firstRow) & ":" & percentileColName & CStr(lastRow))
             .SeriesCollection(2).Values = Worksheets(sheetName).Range(cumulativeColName & CStr(firstRow) & ":" & cumulativeColName & CStr(lastRow))
             .Axes(xlCategory, xlPrimary).HasTitle = True
@@ -297,9 +297,9 @@ Sub plot(sheetName As String, plotName As String)
             .Axes(xlValue, xlPrimary).HasTitle = True
             .Axes(xlValue, xlPrimary).AxisTitle.Characters.Text = "GMROI"
             .Axes(xlValue, xlSecondary).HasTitle = True
-            .Axes(xlValue, xlSecondary).AxisTitle.Characters.Text = "Sell out revenue"
+            .Axes(xlValue, xlSecondary).AxisTitle.Characters.Text = "Initial profit loss"
             .HasTitle = True
-            .ChartTitle.Text = "Sell out revenue and GMROI vs delete percentage"
+            .ChartTitle.Text = "Initial profit loss and GMROI vs delete percentage"
         End With
     End If
     amountOfSeries = chart1.SeriesCollection.Count
