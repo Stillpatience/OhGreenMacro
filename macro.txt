@@ -347,7 +347,7 @@ End Sub
 Sub redistributeDeletedItems(dataSheet As String, deletedSheet As String)
     lastRow = Worksheets(dataSheet).Cells(Rows.Count, 1).End(xlUp).Row
     sortRange = "A1" + ":" + "XFD" + CStr(lastRow)
-    Worksheets(dataSheet).Range(sortRange).Sort Key1:=Worksheets(dataSheet).Range(gmroiColName & "1"), Order1:=xlDescending, Header:=xlYes
+    Worksheets(dataSheet).Range(sortRange).Sort Key1:=Worksheets(dataSheet).Range("U" & "1"), Order1:=xlDescending, Header:=xlYes
     lastRowDeleted = Worksheets(deletedSheet).Cells(Rows.Count, 1).End(xlUp).Row
     For i = 2 To lastRowDeleted
         Dim amountToRedistribute As Long
