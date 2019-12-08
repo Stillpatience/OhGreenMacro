@@ -154,12 +154,12 @@ Sub calculateTotalSellOutProfit(profitSheet As String, gmroiSheet As String, dum
     Dim totalSellOutGmroi As Double
     totalSellOutGmroi = 0
     For i = 2 To lastRowGmroiSheet
-        totalSellOutGmroi = totalSellOutGmroi + Worksheets(gmroiSheet).Cells(i, 27).Value
+        totalSellOutGmroi = totalSellOutGmroi + Worksheets(gmroiSheet).Cells(i, 29).Value
     Next
     Dim totalSellOutSupplier As Double
     totalSellOutSupplier = 0
     For i = 2 To lastRowSupplierSheet
-        totalSellOutSupplier = totalSellOutSupplier + Worksheets(dummySupplierSheet).Cells(i, 25).Value
+        totalSellOutSupplier = totalSellOutSupplier + Worksheets(dummySupplierSheet).Cells(i, 27).Value
     Next
     Worksheets(profitSheet).Cells(1, lastCol + 1).Value = "Items deleted by"
     Worksheets(profitSheet).Cells(1, lastCol + 2).Value = "Sell out profit"
@@ -265,7 +265,10 @@ Sub plot(sheetName As String, plotName As String)
             .Axes(xlCategory, xlPrimary).HasTitle = True
             .Axes(xlCategory, xlPrimary).AxisTitle.Characters.Text = "Remove percentage"
             .Axes(xlValue, xlPrimary).HasTitle = True
-            .Axes(xlValue, xlPrimary).AxisTitle.Characters.Text = "GMROI and initial profit loss"
+            .Axes(xlValue, xlPrimary).HasTitle = True
+            .Axes(xlValue, xlPrimary).AxisTitle.Characters.Text = "GMROI"
+            .Axes(xlValue, xlSecondary).HasTitle = True
+            .Axes(xlValue, xlSecondary).AxisTitle.Characters.Text = "Initial profit loss"
             .HasTitle = True
             .ChartTitle.Text = "Initial profit loss and GMROI vs delete percentage"
             .Axes(xlCategory).MaximumScale = 1
@@ -284,7 +287,9 @@ Sub plot(sheetName As String, plotName As String)
             .Axes(xlCategory, xlPrimary).HasTitle = True
             .Axes(xlCategory, xlPrimary).AxisTitle.Characters.Text = "Remove percentage"
             .Axes(xlValue, xlPrimary).HasTitle = True
-            .Axes(xlValue, xlPrimary).AxisTitle.Characters.Text = "GMROI and initial profit loss"
+            .Axes(xlValue, xlPrimary).AxisTitle.Characters.Text = "GMROI"
+            .Axes(xlValue, xlSecondary).HasTitle = True
+            .Axes(xlValue, xlSecondary).AxisTitle.Characters.Text = "Initial profit loss"
             .HasTitle = True
             .ChartTitle.Text = "Initial profit loss and GMROI vs delete percentage"
         End With
