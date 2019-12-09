@@ -15,10 +15,10 @@ Sub harmonize_data()
     negativeMarginSheetName = "Negative margin"
     Dim noSalesSheetName As String
     noSalesSheetName = "No sales"
-    
+   
     Dim sheets As Variant
     sheets = Array(dummySupplierSheetName, negativeStockSheetName, negativeMarginSheetName, noSalesSheetName)
-    
+   
     Dim sheetWithGmroi As String
     sheetWithGmroi = "Standardized data before GMROI"
     Dim supplierStatsSheet As String
@@ -32,7 +32,7 @@ Sub harmonize_data()
     Dim allSheets As Variant
     allSheets = Array(originalProfitSheetName, dummySupplierSheetName, negativeStockSheetName, negativeMarginSheetName, noSalesSheetName, gmroiSheetName, standardizedSheetName, sheetWithGmroi, supplierStatsSheet, infoSheetName, plotName)
     removeSheetsIfExists (allSheets)
-    
+   
     StartTime = Timer
     standardize_data (standardizedSheetName)
     StandardizedSecondsElapsed = Round(Timer - StartTime, 2)
@@ -41,24 +41,24 @@ Sub harmonize_data()
     CreateSheet (infoSheetName)
     Worksheets(infoSheetName).Cells(1, 1).Value = "For more info please refer to https://github.com/Stillpatience/OhGreenMacro"
     Call delete_rows(standardizedSheetName, negativeStockSheetName, "W", "-1", "<=")
-    
+   
     Call calculateOriginalProfit(standardizedSheetName, originalProfitSheetName)
    
     Call delete_rows(standardizedSheetName, dummySupplierSheetName, "N", "0001007077", "=")
-    
+   
     Call delete_rows(standardizedSheetName, negativeMarginSheetName, "T", "0", "<=")
-    
+   
     Call delete_rows(standardizedSheetName, noSalesSheetName, "U", "0", "<=")
     SecondsElapsed = Round(Timer - StartTime, 2)
     Dim deletionRate As Double
-    
+   
     Dim amountOfDeletedArticles As Long
     amountOfDeletedArticles = countDeletedArticles(sheets)
     GMROI (standardizedSheetName)
     totalArticles = Worksheets(standardizedSheetName).Cells(Rows.Count, 1).End(xlUp).Row + amountOfDeletedArticles - 1
-    
+   
     Call copySheet(standardizedSheetName, sheetWithGmroi)
-    
+   
     Call plot(sheetWithGmroi, plotName)
     Dim wanted_delete_percentage As Double
     Dim input_number As Integer
@@ -70,7 +70,7 @@ Sub harmonize_data()
     Loop
     wanted_delete_percentage = input_number / 100
     deletedByGMROI = removeWithGmroi(standardizedSheetName, gmroiSheetName, wanted_delete_percentage)
-    
+   
     Call calculateSupplierStats(sheetWithGmroi, supplierStatsSheet, standardizedSheetName)
     Call redistributeDeletedItems(standardizedSheetName, gmroiSheetName)
     Call redistributeDeletedItems(standardizedSheetName, dummySupplierSheetName)
@@ -100,12 +100,20 @@ Sub colorSheets(allSheets As Variant)
         If ws.name = "Original profit" Or ws.name = "Supplier stats" Then
             ws.Tab.ColorIndex = 4
         End If
+        If ws.name = "Info sheet" Or ws.name = "Standardized data" Or ws.name = "Standardized data before GMROI" Then
+            ws.Tab.ColorIndex = 5
+        End If
     Next
+    For Each cht In ActiveWorkbook.Charts
+        If cht.name = "Plot" Then
+            cht.Tab.ColorIndex = 5
+        End If
+    Next cht
 End Sub
 Sub calculateSellOutProfit(sheetName As String)
     lastCol = Worksheets(sheetName).Cells(1, Columns.Count).End(xlToLeft).column
     lastRow = Worksheets(sheetName).Cells(Rows.Count, 1).End(xlUp).Row
-    Worksheets(sheetName).Cells(1, lastCol + 1).Value = "Sell Out Profit"
+    Worksheets(sheetName).Cells(1, lastCol + 1).Value = "Sell out revenue"
     For i = 2 To lastRow
         Worksheets(sheetName).Cells(i, lastCol + 1) = Worksheets(sheetName).Cells(i, 19) * Worksheets(sheetName).Cells(i, 23)
     Next
@@ -162,7 +170,7 @@ Sub calculateTotalSellOutProfit(profitSheet As String, gmroiSheet As String, dum
         totalSellOutSupplier = totalSellOutSupplier + Worksheets(dummySupplierSheet).Cells(i, 27).Value
     Next
     Worksheets(profitSheet).Cells(1, lastCol + 1).Value = "Items deleted by"
-    Worksheets(profitSheet).Cells(1, lastCol + 2).Value = "Sell out profit"
+    Worksheets(profitSheet).Cells(1, lastCol + 2).Value = "Sell out revenue"
     Worksheets(profitSheet).Cells(2, lastCol + 1).Value = "GMROI"
     Worksheets(profitSheet).Cells(2, lastCol + 2).Value = totalSellOutGmroi
     Worksheets(profitSheet).Cells(3, lastCol + 1).Value = "Dummy supplier"
@@ -339,7 +347,7 @@ End Sub
 Sub redistributeDeletedItems(dataSheet As String, deletedSheet As String)
     lastRow = Worksheets(dataSheet).Cells(Rows.Count, 1).End(xlUp).Row
     sortRange = "A1" + ":" + "XFD" + CStr(lastRow)
-    Worksheets(dataSheet).Range(sortRange).Sort Key1:=Worksheets(dataSheet).Range(gmroiColName & "1"), Order1:=xlDescending, Header:=xlYes
+    Worksheets(dataSheet).Range(sortRange).Sort Key1:=Worksheets(dataSheet).Range("U" & "1"), Order1:=xlDescending, Header:=xlYes
     lastRowDeleted = Worksheets(deletedSheet).Cells(Rows.Count, 1).End(xlUp).Row
     For i = 2 To lastRowDeleted
         Dim amountToRedistribute As Long
@@ -353,7 +361,7 @@ Sub redistributeDeletedItems(dataSheet As String, deletedSheet As String)
             j = j + 1
             amountToRedistribute = amountToRedistribute - 1
         Wend
-        
+       
      Next
 End Sub
 Sub calculateOriginalProfit(dataSheetName As String, newSheetName As String)
@@ -513,7 +521,7 @@ Public Sub summateStandardizedData(sheetName As String)
         End If
     Wend
      lastRow = Worksheets(sheetName).Cells(Rows.Count, 1).End(xlUp).Row
-    
+   
     sortRange = "A1" + ":" + "XFD" + CStr(lastRow)
     Worksheets(sheetName).Range(sortRange).Sort Key1:=Worksheets(sheetName).Range("P1"), Order1:=xlDescending, Header:=xlYes
     For i = 1 To lastRow
@@ -566,27 +574,28 @@ Sub delete_rows(standardizedSheetName As String, newSheetName As String, column 
     ws.name = newSheetName
     Dim DummySheet As Worksheet
     Set DummySheet = Worksheets(newSheetName)
-    
+   
     Dim dataSheet As Worksheet
     Set dataSheet = Worksheets(standardizedSheetName)
     lastRowDataSheet = dataSheet.Cells(Rows.Count, 1).End(xlUp).Row
     dataSheet.Rows(1).EntireRow.Copy Worksheets(newSheetName).Rows(1)
-    
+   
     sortRange = "A1" + ":" + "XFD" + CStr(lastRowDataSheet)
     dataSheet.Range(sortRange).Sort Key1:=dataSheet.Range(column + "1"), Order1:=xlDescending, Header:=xlYes
     
+    MsgBox newSheetName
+   
     For i = 2 To lastRowDataSheet
         If dataSheet.Cells(i, column).Value <> "X" And dataSheet.Cells(i, column).Value <= searchedValue Then
             Dim first_i As Long
             first_i = i
-            
+           
             If operator = "=" Then
                 While (dataSheet.Cells(i + 1, column).Value = searchedValue)
                     i = i + 1
                 Wend
             Else
                 If operator = "<=" Then
-                    
                     While (i < lastRowDataSheet And CInt(dataSheet.Cells(i + 1, column).Value) <= CInt(searchedValue))
                         i = i + 1
                     Wend
@@ -594,8 +603,10 @@ Sub delete_rows(standardizedSheetName As String, newSheetName As String, column 
             End If
             copyRange = "A" + CStr(first_i) + ":" + "XFD" + CStr(i)
             pasteRange = "A1" + ":" + "XFD" + CStr(i - first_i + 1)
-            dataSheet.Range(copyRange).Copy Destination:=DummySheet.Range(pasteRange).End(xlUp).Offset(1)
-            dataSheet.Range(copyRange).Delete
+            If i > 2 Then
+                dataSheet.Range(copyRange).Copy Destination:=DummySheet.Range(pasteRange).End(xlUp).Offset(1)
+                dataSheet.Range(copyRange).Delete
+            End If
             Exit For
         End If
     Next
