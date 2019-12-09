@@ -601,8 +601,10 @@ Sub delete_rows(standardizedSheetName As String, newSheetName As String, column 
             End If
             copyRange = "A" + CStr(first_i) + ":" + "XFD" + CStr(i)
             pasteRange = "A1" + ":" + "XFD" + CStr(i - first_i + 1)
-            dataSheet.Range(copyRange).Copy Destination:=DummySheet.Range(pasteRange).End(xlUp).Offset(1)
-            dataSheet.Range(copyRange).Delete
+            If i > 2 Then
+                dataSheet.Range(copyRange).Copy Destination:=DummySheet.Range(pasteRange).End(xlUp).Offset(1)
+                dataSheet.Range(copyRange).Delete
+            End If
             Exit For
         End If
     Next
