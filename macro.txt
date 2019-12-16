@@ -74,7 +74,6 @@ Sub harmonize_data()
     Call calculateSupplierStats(sheetWithGmroi, supplierStatsSheet, standardizedSheetName)
     Call redistributeDeletedItems(standardizedSheetName, gmroiSheetName)
     Call redistributeDeletedItems(standardizedSheetName, dummySupplierSheetName)
-    Call redistributeDeletedItems(standardizedSheetName, negativeStockSheetName)
     Call redistributeDeletedItems(standardizedSheetName, negativeMarginSheetName)
     Call calculateNewProfitPerProduct(standardizedSheetName, originalProfitSheetName)
     calculateSellOutProfit (dummySupplierSheetName)
@@ -582,8 +581,11 @@ Sub delete_rows(standardizedSheetName As String, newSheetName As String, column 
    
     sortRange = "A1" + ":" + "XFD" + CStr(lastRowDataSheet)
     dataSheet.Range(sortRange).Sort Key1:=dataSheet.Range(column + "1"), Order1:=xlDescending, Header:=xlYes
+<<<<<<< HEAD
     
     MsgBox newSheetName
+=======
+>>>>>>> 18115f1fc612e8de0198a30e4fdb39752672e546
    
     For i = 2 To lastRowDataSheet
         If dataSheet.Cells(i, column).Value <> "X" And dataSheet.Cells(i, column).Value <= searchedValue Then
@@ -596,6 +598,10 @@ Sub delete_rows(standardizedSheetName As String, newSheetName As String, column 
                 Wend
             Else
                 If operator = "<=" Then
+<<<<<<< HEAD
+=======
+                   
+>>>>>>> 18115f1fc612e8de0198a30e4fdb39752672e546
                     While (i < lastRowDataSheet And CInt(dataSheet.Cells(i + 1, column).Value) <= CInt(searchedValue))
                         i = i + 1
                     Wend
