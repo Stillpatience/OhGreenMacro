@@ -254,9 +254,9 @@ Sub plot(sheetName As String, plotName As String)
     Do While Worksheets(sheetName).Cells(firstRow, gmroiCol).Value < 0
         firstRow = firstRow + 1
     Loop
-    'Do While Worksheets(sheetName).Cells(lastRow, gmroiCol).Value = "" Or Worksheets(sheetName).Cells(lastRow, gmroiCol).Value > 5
-     ''   lastRow = lastRow - 1
-    'Loop
+    Do While Worksheets(sheetName).Cells(lastRow, gmroiCol).Value = "" Or Worksheets(sheetName).Cells(lastRow, gmroiCol).Value > 20
+        lastRow = lastRow - 1
+    Loop
     Dim chart1 As Chart
     Set chart1 = Charts.Add
     colLetterxAxis = Split(Worksheets(sheetName).Cells(1, lastCol + 2).Address, "$")(1)
