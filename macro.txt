@@ -276,6 +276,9 @@ Sub plot(sheetName As String, plotName As String)
             .Axes(xlValue, xlPrimary).HasTitle = True
             .Axes(xlValue, xlPrimary).HasTitle = True
             .Axes(xlValue, xlPrimary).AxisTitle.Characters.Text = "GMROI"
+            .Axes(xlValue, xlPrimary).HasMajorGridlines = True
+            .Axes(xlValue, xlPrimary).HasMinorGridlines = True
+            .Axes(xlValue, xlPrimary).MinorGridlines.Border.LineStyle = xlDash
             .Axes(xlValue, xlSecondary).HasTitle = True
             .Axes(xlValue, xlSecondary).AxisTitle.Characters.Text = "Initial profit loss"
             .HasTitle = True
@@ -296,6 +299,9 @@ Sub plot(sheetName As String, plotName As String)
             .Axes(xlCategory, xlPrimary).AxisTitle.Characters.Text = "Remove percentage"
             .Axes(xlValue, xlPrimary).HasTitle = True
             .Axes(xlValue, xlPrimary).AxisTitle.Characters.Text = "GMROI"
+            .Axes(xlValue, xlPrimary).HasMajorGridlines = True
+            .Axes(xlValue, xlPrimary).HasMinorGridlines = True
+            .Axes(xlValue, xlPrimary).MinorGridlines.Border.LineStyle = xlDash
             .Axes(xlValue, xlSecondary).HasTitle = True
             .Axes(xlValue, xlSecondary).AxisTitle.Characters.Text = "Initial profit loss"
             .HasTitle = True
