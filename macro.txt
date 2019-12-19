@@ -443,7 +443,7 @@ Sub standardize_data(standardizedSheetName As String)
         Worksheets(standardizedSheetName).Cells(1, j) = headers(j - 1)
     Next
     'Select the data sheet
-    dataSheetName = "Werkfile"
+    dataSheetName = "Sheet1"
     Dim dataSheet As Worksheet
     Set dataSheet = Worksheets(dataSheetName)
     Dim stdSheet As Worksheet
