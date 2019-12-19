@@ -246,6 +246,7 @@ Sub plot(sheetName As String, plotName As String)
         Worksheets(sheetName).Cells(i, lastCol + 2).NumberFormat = "0.00%"
         Worksheets(sheetName).Cells(i, lastCol + 2).Value = (i - 1) / (lastRow - 1)
     Next
+    Cells(1, 1).Select
     cumulativeCol = lastCol + 1
     cumulativeColName = Split(Cells(1, cumulativeCol).Address, "$")(1)
     percentileCol = lastCol + 2
@@ -442,7 +443,7 @@ Sub standardize_data(standardizedSheetName As String)
         Worksheets(standardizedSheetName).Cells(1, j) = headers(j - 1)
     Next
     'Select the data sheet
-    dataSheetName = "Data1"
+    dataSheetName = "Werkfile"
     Dim dataSheet As Worksheet
     Set dataSheet = Worksheets(dataSheetName)
     Dim stdSheet As Worksheet
@@ -456,26 +457,33 @@ Sub standardize_data(standardizedSheetName As String)
             'If the value of the cell in the column is not empty it is a header
             If Cells(i, j).Value <> "" Then
                 currentHeader = Cells(i, j).Value
-                If currentHeader = "Article EAN" Then
-                    lastRowDataSheet = dataSheet.Cells(Rows.Count, 1).End(xlUp).Row
-                    Dim lastColDataSheet As String
-                    lastColDataSheet = dataSheet.Cells(1, Columns.Count).End(xlToLeft).Address
-                    colLetter = Mid(lastColDataSheet, 2, 2)
-                    sortCol = Cells(i, j).Address
-                    sortColLetter = Mid(sortCol, 2, 1)
-                    sortRange = "A1" + ":" + CStr(colLetter) + CStr(lastRowDataSheet)
-                    dataSheet.Range(sortRange).Sort Key1:=dataSheet.Range(sortColLetter + "1"), Order1:=xlAscending, Header:=xlYes
-                End If
-                If InArray(Cells(i, j).Value, headers) Then
-                    'Copy the found column to the standardized worksheet in the correct column
-                    For k = 1 To Worksheets(standardizedSheetName).Cells(1, Columns.Count).End(xlToLeft).column
-                        If Worksheets(standardizedSheetName).Cells(1, k).Value = currentHeader Then
-                            sheets(dataSheetName).Columns(j).Copy Destination:=sheets(standardizedSheetName).Columns(k)
-                        End If
-                    Next
+                If currentHeader = "AvgStock" Then
+                     ColumnLetter = Split(Cells(1, j).Address, "$")(1)
+                     dataSheet.Range(ColumnLetter & "1:" & ColumnLetter & CStr(lastRow)).Copy
+                     stdSheet.Range("X1").PasteSpecial Paste:=xlPasteValues
+                     Application.CutCopyMode = False
+                Else
+                    If currentHeader = "Article EAN" Then
+                        lastRowDataSheet = dataSheet.Cells(Rows.Count, 1).End(xlUp).Row
+                        Dim lastColDataSheet As String
+                        lastColDataSheet = dataSheet.Cells(1, Columns.Count).End(xlToLeft).Address
+                        colLetter = Mid(lastColDataSheet, 2, 2)
+                        sortCol = Cells(i, j).Address
+                        sortColLetter = Mid(sortCol, 2, 1)
+                        sortRange = "A1" + ":" + CStr(colLetter) + CStr(lastRowDataSheet)
+                        dataSheet.Range(sortRange).Sort Key1:=dataSheet.Range(sortColLetter + "1"), Order1:=xlAscending, Header:=xlYes
+                    End If
+                    If InArray(Cells(i, j).Value, headers) Then
+                        'Copy the found column to the standardized worksheet in the correct column
+                        For k = 1 To Worksheets(standardizedSheetName).Cells(1, Columns.Count).End(xlToLeft).column
+                            If Worksheets(standardizedSheetName).Cells(1, k).Value = currentHeader Then
+                                sheets(dataSheetName).Columns(j).Copy Destination:=sheets(standardizedSheetName).Columns(k)
+                            End If
+                        Next
+                        Exit For
+                    End If
                     Exit For
                 End If
-                Exit For
             End If
         Next
     Next
