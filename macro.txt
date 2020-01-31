@@ -2,6 +2,9 @@ Public gmroiCol As Integer
 Public gmroiColName As String
 
 Sub harmonize_data()
+    
+    Call makeSheet1
+    
     Dim standardizedSheetName As String
     standardizedSheetName = "Standardized data"
     Dim negativeStockSheetName As String
@@ -87,10 +90,24 @@ Sub harmonize_data()
     lastRow = Worksheets(sheetWithGmroi).Cells(Rows.Count, 1).End(xlUp).Row
     sortRange = "A1" + ":" + "XFD" + CStr(lastRow)
     Worksheets(sheetWithGmroi).Range(sortRange).Sort Key1:=Worksheets(sheetWithGmroi).Range(gmroiColName & "1"), Order1:=xlAscending, Header:=xlYes
-    Worksheets(originalProfitSheetName).Move after:=Worksheets(gmroiSheetName)
+    Worksheets(originalProfitSheetName).Move After:=Worksheets(gmroiSheetName)
     colorSheets (allSheets)
 End Sub
 
+Sub makeSheet1()
+    dataSheetName = "Sheet1"
+    Dim allSheets As Variant
+    allSheets = Array(dataSheetName)
+    removeSheetsIfExists (allSheets)
+    Worksheets("Data1").Copy After:=Worksheets("Data1")
+    ActiveSheet.name = "Sheet1"
+    
+    lrow = Worksheets("Data3").Cells(Rows.Count, 1).End(xlUp).Row
+    Worksheets("Data3").Range("AB3:AB" & lrow).Copy
+    Worksheets(dataSheetName).Range("W1").PasteSpecial Paste:=xlPasteValues
+    
+    Worksheets(dataSheetName).Cells(1, 23).Value = "AvgStock"
+End Sub
 Sub colorSheets(allSheets As Variant)
     For Each ws In Worksheets
         If ws.name = "Dummy supplier" Or ws.name = "Negative profit" Or ws.name = "No sales" Or ws.name = "Removed by GMROI" Or ws.name = "Negative margin" Then
@@ -318,7 +335,7 @@ Sub plot(sheetName As String, plotName As String)
     'chart1.SeriesCollection(1).XValues = Worksheets(sheetName).Range(RngxAxis)
 End Sub
 Sub copySheet(original As String, target As String)
-    Worksheets(original).Copy after:=sheets(sheets.Count)
+    Worksheets(original).Copy After:=sheets(sheets.Count)
     ActiveSheet.name = target
 End Sub
 Sub autoFitSheets(var As Variant)
@@ -500,7 +517,7 @@ End Function
 'Function that creates a new sheet in the excel file with the given name. The sheet will be added as last sheet
 Public Function CreateSheet(name As String)
     Dim ws As Worksheet
-    Set ws = ThisWorkbook.sheets.Add(after:= _
+    Set ws = ThisWorkbook.sheets.Add(After:= _
              ThisWorkbook.sheets(ThisWorkbook.sheets.Count))
     ws.name = name
     Set CreateSheet = ws
@@ -570,3 +587,4 @@ Public Function countArticles(sheets As Variant)
     Next
     countArticles = amountOfArticles
 End Function
+
