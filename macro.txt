@@ -419,7 +419,9 @@ Function removeWithGmroi(name As String, grmoiSheetName As String, deletionRate 
     CreateSheet (grmoiSheetName)
     Worksheets(name).Range(sortRange).Sort Key1:=Worksheets(name).Range(gmroiColName & "1"), Order1:=xlDescending, Header:=xlYes
     Worksheets(name).Range("1:1").Copy Destination:=Worksheets(grmoiSheetName).Range("1:1")
-    Worksheets(name).Range(CStr(amountOfArticlesLeft - amountOfArticlesToStillBeRemoved + 2) & ":" & CStr(amountOfArticlesLeft + 1)).Cut Destination:=Worksheets(grmoiSheetName).Range("2:" & CStr(amountOfArticlesToStillBeRemoved + 1))
+    If amountOfArticlesToStillBeRemoved > 0 Then
+        Worksheets(name).Range(CStr(amountOfArticlesLeft - amountOfArticlesToStillBeRemoved + 2) & ":" & CStr(amountOfArticlesLeft + 1)).Cut Destination:=Worksheets(grmoiSheetName).Range("2:" & CStr(amountOfArticlesToStillBeRemoved + 1))
+    End If
     removeWithGmroi = amountOfArticlesToStillBeRemoved
 End Function
 
